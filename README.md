@@ -1,2 +1,2 @@
-# LSM-Least-Square-Method
-LSM from scratch, using Python
+# Linear Regression using LSM (Least Square Method)
+Linear Regression from scratch, using Python.
