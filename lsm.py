@@ -19,7 +19,7 @@ class LinearRegression(object):
                 raise WrongColumnsNames
         except WrongColumnsNames:
             print("Check columns names!")
-            return 
+            sys.exit() 
         else:
             df = df[colnames]
             alpha = pd.DataFrame(np.ones(len(df)), columns = ['alpha'])
@@ -44,31 +44,31 @@ class LinearRegression(object):
         return out
     
     @staticmethod
-    def y_tar(x, out):
-        y_tar = np.sum(np.multiply(x, out), axis = 1)
-        y_tar = np.array([y_tar]).T
-        return y_tar
+    def y_hat(x, out):
+        y_hat = np.sum(np.multiply(x, out), axis = 1)
+        y_hat = np.array([y_hat]).T
+        return y_hat
     
     @staticmethod
-    def remainder(y, y_tar):
-        remainder = y - y_tar
+    def remainder(y_tar, y_hat):
+        remainder = y_tar - y_hat
         return remainder.to_numpy()
     
     @staticmethod
-    def table(y, y_tar, remainder):
-        y_hat = pd.DataFrame(y, columns = ['y_hat'])
+    def table(y_tar, y_hat, remainder):
         y_tar = pd.DataFrame(y_tar, columns = ['y_tar'])
+        y_hat = pd.DataFrame(y_hat, columns = ['y_hat'])
         remainder = pd.DataFrame(remainder, columns = ['remainder'])
-        table = pd.concat([y_hat, y_tar, remainder], axis = 1)
+        table = pd.concat([y_tar, y_hat, remainder], axis = 1)
         
         return table
     
     @staticmethod
-    def coef_of_determination(y, y_tar):
-        y = y.to_numpy()
-        avg = np.mean(y)
-        down = np.sum(np.power(np.subtract(y, avg), 2))
-        up = np.sum(np.power(np.subtract(y_tar, avg), 2))
+    def r2(y_tar, y_hat):
+        y_tar = y_tar.to_numpy()
+        avg = np.mean(y_tar)
+        down = np.sum(np.power(np.subtract(y_tar, avg), 2))
+        up = np.sum(np.power(np.subtract(y_hat, avg), 2))
         coef = up/down
         
         return coef
@@ -78,17 +78,17 @@ class LinearRegression(object):
         
         self.lsm = self.lsm(data, self.x_names, self.y_names)
         
-        y_hat = data[self.y_names].to_numpy()
+        y_tar = data[self.y_names].to_numpy()
         
         x = data[['alpha'] + self.x_names].to_numpy()
-        y_tar = self.y_tar(x, self.lsm)
+        y_hat = self.y_hat(x, self.lsm)
         
-        remainder = self.remainder(data[self.y_names], y_tar)
+        remainder = self.remainder(data[self.y_names], y_hat)
         
-        coef = self.coef_of_determination(data[self.y_names], y_tar)
+        coef = self.r2(data[self.y_names], y_hat)
         
-        FIT = namedtuple("FIT", "COEF y_hat y_tar remainder R2")
-        fit = FIT(self.lsm, y_hat, y_tar, remainder, coef)
+        FIT = namedtuple("FIT", "COEF y_tar y_hat remainder R2")
+        fit = FIT(self.lsm, y_tar, y_hat, remainder, coef)
         
         return fit
     
@@ -98,24 +98,45 @@ class LinearRegression(object):
                 raise WrongLengthError
         except WrongLengthError:
             print("Wrong Vector Length!")
-            return
+            sys.exit()
         else:
             ones = np.ones(len(x))
             x = np.insert(x, 0, np.ones(len(x)).tolist(), axis = 1)
-            y_tar = np.sum(np.multiply(x, self.lsm), axis = 1)
-            y_tar = np.array([y_tar]).T
+            y_hat = np.sum(np.multiply(x, self.lsm), axis = 1)
+            y_hat = np.array([y_hat]).T
         
-        return y_tar
+        return y_hat
+
         
 if __name__ == "__main__":
     from collections import namedtuple
     import pandas as pd
     import numpy as np
+    import sys
+    from matplotlib import pyplot as plt
     
-    df = pd.read_excel('xxx')
-    kmnk = LinearRegression(df, ['Y'], ['X1'])
+    data = {'y': np.random.rand(10), 'x1': np.random.rand(10)+1, 'x2': np.random.rand(10)+2}
+    df = pd.DataFrame(data)
+    print('Data to analyis: \n', df, '\n')
+
+    kmnk = LinearRegression(df, ['y'], ['x1','x2'])
     fit = kmnk.fit()
-    
-    print(fit, end = '\n')
-    print(kmnk.table(fit.y_hat, fit.y_tar, fit.remainder), end = '\n')
-    print(kmnk.predict(np.array([[12],[13],[14]])))
+
+    values = np.array([[0.12,1.22],[0.34,1.34],[0.95,2.45]])
+    pred = (kmnk.predict(values))
+
+    print(f'Coefficients: {fit.COEF}\n')
+    print(f'R2: {fit.R2}\n')
+    print('\nTable with remainders: \n', kmnk.table(fit.y_tar, fit.y_hat, fit.remainder), '\n')
+    print(f'Predicted values of {values.tolist()}:\n {pred.tolist()}\n')
+
+    #fit plot
+    plt.plot(fit.y_tar, color = 'blue', label = 'y_hat')
+    plt.plot(fit.y_hat, color = 'red', label = 'y_hat')
+    plt.title('Fit Plot')
+    plt.show()
+
+    #plot with fit and predicted values
+    plt.plot(fit.y_tar, color = 'blue', label = 'y_hat')
+    plt.plot(np.append(fit.y_hat, pred), color = 'red', label = 'predicted')
+    plt.show()
